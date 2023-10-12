@@ -437,7 +437,7 @@ func (c *Client) FindTransactionIDByTransitionID(transitionId string) (string, e
 	return transactionId, err
 }
 
-func (c *Client) FindTransitionIDByInputOrPutputID(ioId string) (string, error) {
+func (c *Client) FindTransitionIDByInputOrOutputID(ioId string) (string, error) {
 	rpcEndpoint := "/find/transitionID/" + ioId
 	requestUrl := c.url + rpcEndpoint
 

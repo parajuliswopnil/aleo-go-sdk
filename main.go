@@ -15,7 +15,7 @@ func main() {
 
 	block, err := client.GetBlock("68100")
 
-	transaction, err := client.FindTransitionIDByInputOrPutputID(block.Transactions[0].Transaction.Execution_.Transitions[0].Outputs[0].Id)
+	transaction, err := client.FindTransitionIDByInputOrOutputID(block.Transactions[0].Transaction.Execution_.Transitions[0].Outputs[0].Id)
 
 	fmt.Println(transaction)
 }
