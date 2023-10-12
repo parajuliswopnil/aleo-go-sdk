@@ -2,9 +2,12 @@ package rpc
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
+	"os"
 	"strconv"
+	"strings"
 
 	"github.com/parajuliswopnil/aleo-go-sdk/types"
 )
@@ -149,7 +152,7 @@ func (c *Client) GetBlocksTransactions(height int64) ([]types.Transactions, erro
 	if err != nil {
 		return nil, err
 	}
-	return block.Transactions, err
+	return block.Transactions, nil
 }
 
 func (c *Client) GetTransactionById(transactionId string) (*types.Transaction, error) {
@@ -168,6 +171,291 @@ func (c *Client) GetTransactionById(transactionId string) (*types.Transaction, e
 	transaction := &types.Transaction{}
 
 	err = json.Unmarshal(t, transaction)
-	return transaction, err 
+	return transaction, nil
 }
 
+// func (c *Client) GetMemoryPoolTransactions() ([]types.Transactions, error) {
+// 	rpcEndpoint := "/memoryPool/transactions"
+// 	requestUrl := c.url + rpcEndpoint
+
+// 	response, err := http.Get(requestUrl)
+// 	if err != nil {
+// 		return nil, err
+// 	}
+// 	t, err := io.ReadAll(response.Body)
+
+// 	if err != nil {
+// 		return nil, err
+// 	}
+// 	transaction := &types.Transaction{}
+
+// 	err = json.Unmarshal(t, transaction)
+// 	return transaction, err
+// }
+
+// returns the abi of the aleo program and saves the abi to the desired path
+func (c *Client) GetProgram(programId, path string) error {
+	rpcEndpoint := "/program/" + programId
+	requestUrl := c.url + rpcEndpoint
+
+	response, err := http.Get(requestUrl)
+	if err != nil {
+		return err
+	}
+	pr, err := io.ReadAll(response.Body)
+
+	if err != nil {
+		return err
+	}
+
+	program := string(pr)
+	lengthOfRootState := len(program)
+
+	if string(program[0]) == "\"" && string(program[lengthOfRootState-1]) == "\"" {
+		program = program[1 : lengthOfRootState-1]
+	}
+
+	programIntermidiate := strings.Split(program, "\\n")
+
+	file, err := os.Create(path)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	for _, line := range programIntermidiate {
+		_, err := file.WriteString(line + "\n")
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+
+}
+
+func (c *Client) GetMappingNames(programId string) ([]string, error) {
+	var mapping []string
+	rpcEndpoint := "/program/" + programId + "/mappings"
+	requestUrl := c.url + rpcEndpoint
+
+	response, err := http.Get(requestUrl)
+	if err != nil {
+		return nil, err
+	}
+	t, err := io.ReadAll(response.Body)
+
+	if err != nil {
+		return nil, err
+	}
+
+	err = json.Unmarshal(t, &mapping)
+
+	fmt.Println(mapping)
+	return mapping, nil
+}
+
+// returns the value in a key-value mapping corresponding to the supplied mappingKey
+func (c *Client) GetMappingValue(programId, mappingName, mappingKey string) (map[string]interface{}, error) {
+	rpcEndpoint := "/program/" + programId + "/mapping/" + mappingName + "/" + mappingKey
+	requestUrl := c.url + rpcEndpoint
+
+	response, err := http.Get(requestUrl)
+	if err != nil {
+		return nil, err
+	}
+	t, err := io.ReadAll(response.Body)
+
+	if err != nil {
+		return nil, err
+	}
+
+	value := make(map[string]interface{})
+
+	value[mappingKey] = string(t)
+
+	return value, nil
+}
+
+// Returns the state path for the given commitment. The state path proves existence of the transition leaf to either a global or local state root.
+func (c *Client) GetStatePathForCommitment(commitment string) {}
+
+// returns the list of current beacon node addresses
+func (c *Client) GetBeacons() ([]string, error) {
+	rpcEndpoint := "/beacons"
+	requestUrl := c.url + rpcEndpoint
+
+	response, err := http.Get(requestUrl)
+	if err != nil {
+		return nil, err
+	}
+	t, err := io.ReadAll(response.Body)
+
+	if err != nil {
+		return nil, err
+	}
+
+	var beacons []string
+	err = json.Unmarshal(t, &beacons)
+	if err != nil {
+		return nil, err
+	}
+	return beacons, nil
+}
+
+func (c *Client) GetPeersCount() (int, error) {
+	rpcEndpoint := "/peers/count"
+	requestUrl := c.url + rpcEndpoint
+
+	response, err := http.Get(requestUrl)
+	if err != nil {
+		return 0, err
+	}
+	t, err := io.ReadAll(response.Body)
+
+	if err != nil {
+		return 0, err
+	}
+
+	count, err := strconv.Atoi(string(t))
+	if err != nil {
+		return 0, err
+	}
+
+	return count, nil
+}
+
+// Returns the peers connected to the node.
+func (c *Client) GetAllPeers() ([]string, error) {
+	rpcEndpoint := "/peers/all"
+	requestUrl := c.url + rpcEndpoint
+
+	response, err := http.Get(requestUrl)
+	if err != nil {
+		return nil, err
+	}
+	t, err := io.ReadAll(response.Body)
+
+	if err != nil {
+		return nil, err
+	}
+
+	var peers []string
+	err = json.Unmarshal(t, &peers)
+	if err != nil {
+		return nil, err
+	}
+	return peers, nil
+}
+
+func (c *Client) GetNodeAddress() (string, error) {
+	rpcEndpoint := "/node/address"
+	requestUrl := c.url + rpcEndpoint
+
+	response, err := http.Get(requestUrl)
+	if err != nil {
+		return "", err
+	}
+	t, err := io.ReadAll(response.Body)
+
+	if err != nil {
+		return "", err
+	}
+
+	return string(t), nil
+}
+
+// returns the block hash related to the transaction id
+func (c *Client) GetBlockHashByTransactionId(transactionId string) (string, error) {
+	rpcEndpoint := "/find/blockHash/" + transactionId
+	requestUrl := c.url + rpcEndpoint
+
+	response, err := http.Get(requestUrl)
+	if err != nil {
+		return "", err
+	}
+	t, err := io.ReadAll(response.Body)
+
+	if err != nil {
+		return "", err
+	}
+
+	hash := string(t)
+	lengthOfRootState := len(hash)
+
+	if string(hash[0]) == "\"" && string(hash[lengthOfRootState-1]) == "\"" {
+		hash = hash[1 : lengthOfRootState-1]
+	}
+	return hash, err
+}
+
+// returns transaction id related to the program id
+func (c *Client) FindTransactionIDByProgramID(programId string) (string, error) {
+	rpcEndpoint := "/find/transactionID/deployment/" + programId
+	requestUrl := c.url + rpcEndpoint
+
+	response, err := http.Get(requestUrl)
+	if err != nil {
+		return "", err
+	}
+	t, err := io.ReadAll(response.Body)
+
+	if err != nil {
+		return "", err
+	}
+
+	transactionId := string(t)
+	lengthOfRootState := len(transactionId)
+
+	if string(transactionId[0]) == "\"" && string(transactionId[lengthOfRootState-1]) == "\"" {
+		transactionId = transactionId[1 : lengthOfRootState-1]
+	}
+	return transactionId, err
+}
+
+// return transaction id related to the transition id
+func (c *Client) FindTransactionIDByTransitionID(transitionId string) (string, error) {
+	rpcEndpoint := "/find/transactionID/" + transitionId
+	requestUrl := c.url + rpcEndpoint
+
+	response, err := http.Get(requestUrl)
+	if err != nil {
+		return "", err
+	}
+	t, err := io.ReadAll(response.Body)
+
+	if err != nil {
+		return "", err
+	}
+
+	transactionId := string(t)
+	lengthOfRootState := len(transactionId)
+
+	if string(transactionId[0]) == "\"" && string(transactionId[lengthOfRootState-1]) == "\"" {
+		transactionId = transactionId[1 : lengthOfRootState-1]
+	}
+	return transactionId, err
+}
+
+func (c *Client) FindTransitionIDByInputOrPutputID(ioId string) (string, error) {
+	rpcEndpoint := "/find/transitionID/" + ioId
+	requestUrl := c.url + rpcEndpoint
+
+	response, err := http.Get(requestUrl)
+	if err != nil {
+		return "", err
+	}
+	t, err := io.ReadAll(response.Body)
+
+	if err != nil {
+		return "", err
+	}
+
+	transitionId := string(t)
+	lengthOfRootState := len(transitionId)
+
+	if string(transitionId[0]) == "\"" && string(transitionId[lengthOfRootState-1]) == "\"" {
+		transitionId = transitionId[1 : lengthOfRootState-1]
+	}
+	return transitionId, err
+}
