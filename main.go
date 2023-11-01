@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/parajuliswopnil/aleo-go-sdk/rpc"
@@ -13,9 +14,15 @@ func main() {
 		return
 	}
 
-	block, err := client.GetBlock("68100")
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 
-	transaction, err := client.FindTransitionIDByInputOrOutputID(block.Transactions[0].Transaction.Execution_.Transitions[0].Outputs[0].Id)
+
+	transaction, err := client.GetAllPeers(ctx)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
 
 	fmt.Println(transaction)
 }
