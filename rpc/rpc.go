@@ -36,9 +36,6 @@ func getHttpResponse(ctx context.Context, method, requestURL string) (*http.Resp
 		return nil, err
 	}
 
-	ctx, cancel := context.WithTimeout(ctx, defaultReadTimeout)
-	defer cancel()
-
 	req = req.WithContext(ctx)
 
 	client := http.DefaultClient
